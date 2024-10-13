@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>To-Do List with Location</title>
+        <link
+            rel="stylesheet"
+            href="https://unpkg.com/leaflet/dist/leaflet.css"
+        />
+        <style>
+            #map {
+                height: 400px;
+                width: 100%;
+            }
+            #form {
+                margin-bottom: 20px;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>To-Do List with Location</h1>
+        <div id="form">
+            <input type="text" id="taskTitle" placeholder="Task Title" />
+            <button onclick="addTask()">Add Task</button>
+        </div>
+        <div id="map"></div>
+
+        <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+        <script>
+            let map;
+            let selectedLocation = null;
+            let selectedLocationMarker = null;
+
+            function initMap() {
+                map = L.map("map").setView([51.505, -0.09], 13);
+
+                L.tileLayer(
+                    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                    {
+                        maxZoom: 19,
+                    },
+                ).addTo(map);
+
+                map.on("click", function (event) {
+                    if (selectedLocationMarker) {
+                        map.removeLayer(selectedLocationMarker);
+                    }
+
+                    selectedLocation = {
+                        latitude: event.latlng.lat,
+                        longitude: event.latlng.lng,
+                    };
+
+                    selectedLocationMarker = L.marker([
+                        event.latlng.lat,
+                        event.latlng.lng,
+                    ]).addTo(map);
+                });
+            }
+
+            function addTask() {
+                const taskTitle = document.getElementById("taskTitle").value;
+                if (!taskTitle || !selectedLocation) {
+                    alert(
+                        "Please add a task title and select a location on the map.",
+                    );
+                    return;
+                }
+
+                fetch("http://localhost:5000/add_task", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        title: taskTitle,
+                        latitude: selectedLocation.latitude,
+                        longitude: selectedLocation.longitude,
+                    }),
+                })
+                    .then((response) => response.json())
+                    .then((data) => {
+                        alert(data.message);
+                        document.getElementById("taskTitle").value = "";
+                        selectedLocation = null;
+                        if (selectedLocationMarker) {
+                            map.removeLayer(selectedLocationMarker);
+                            selectedLocationMarker = null;
+                        }
+                    });
+            }
+
+            window.onload = initMap;
+        </script>
+    </body>
+</html>
